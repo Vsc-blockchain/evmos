@@ -49,7 +49,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
 	evmosclient "github.com/evmos/evmos/v12/client"
 	"github.com/evmos/evmos/v12/client/debug"
@@ -59,6 +58,7 @@ import (
 	servercfg "github.com/evmos/evmos/v12/server/config"
 	srvflags "github.com/evmos/evmos/v12/server/flags"
 
+	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	"github.com/evmos/evmos/v12/app"
 	cmdcfg "github.com/evmos/evmos/v12/cmd/config"
 	evmoskr "github.com/evmos/evmos/v12/crypto/keyring"

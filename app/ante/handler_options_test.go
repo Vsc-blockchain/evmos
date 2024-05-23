@@ -62,19 +62,6 @@ func (suite *AnteTestSuite) TestValidateHandlerOptions() {
 			false,
 		},
 		{
-			"fail - empty staking keeper",
-			ante.HandlerOptions{
-				Cdc:                suite.app.AppCodec(),
-				AccountKeeper:      suite.app.AccountKeeper,
-				BankKeeper:         suite.app.BankKeeper,
-				DistributionKeeper: suite.app.DistrKeeper,
-
-				IBCKeeper:     suite.app.IBCKeeper,
-				StakingKeeper: nil,
-			},
-			false,
-		},
-		{
 			"fail - empty fee market keeper",
 			ante.HandlerOptions{
 				Cdc:                suite.app.AppCodec(),

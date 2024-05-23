@@ -15,7 +15,6 @@ import (
 	evmostypes "github.com/evmos/evmos/v12/types"
 	evm "github.com/evmos/evmos/v12/x/evm/types"
 	"github.com/evmos/evmos/v12/x/incentives/types"
-	vestingtypes "github.com/evmos/evmos/v12/x/vesting/types"
 )
 
 func (suite *KeeperTestSuite) TestEvmHooksStoreTxGasUsed() {
@@ -69,21 +68,6 @@ func (suite *KeeperTestSuite) TestEvmHooksStoreTxGasUsed() {
 			"correct execution with Base account - one tx",
 			func(contractAddr common.Address) {
 				acc := authtypes.NewBaseAccount(sdk.AccAddress(suite.address.Bytes()), nil, 0, 0)
-				suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
-
-				res := suite.MintERC20Token(contractAddr, suite.address, suite.address, big.NewInt(1000))
-				expGasUsed = res.AsTransaction().Gas()
-			},
-			true,
-		},
-		{
-			"correct execution with Vesting account - one tx",
-			func(contractAddr common.Address) {
-				acc := vestingtypes.NewClawbackVestingAccount(
-					authtypes.NewBaseAccount(sdk.AccAddress(suite.address.Bytes()), nil, 0, 0),
-					suite.address.Bytes(), nil, suite.ctx.BlockTime(), nil, nil,
-				)
-
 				suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
 
 				res := suite.MintERC20Token(contractAddr, suite.address, suite.address, big.NewInt(1000))
