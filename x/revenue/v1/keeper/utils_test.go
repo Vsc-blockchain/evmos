@@ -62,11 +62,6 @@ func (suite *KeeperTestSuite) SetupApp() {
 	err = suite.app.EvmKeeper.SetParams(suite.ctx, evmParams)
 	require.NoError(t, err)
 
-	inflationParams := suite.app.InflationKeeper.GetParams(suite.ctx)
-	inflationParams.EnableInflation = false
-	err = suite.app.InflationKeeper.SetParams(suite.ctx, inflationParams)
-	require.NoError(t, err)
-
 	// Set Validator
 	valAddr := sdk.ValAddress(suite.address.Bytes())
 	validator, err := stakingtypes.NewValidator(valAddr, privCons.PubKey(), stakingtypes.Description{})

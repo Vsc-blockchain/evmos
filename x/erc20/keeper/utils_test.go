@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -35,7 +36,6 @@ import (
 	"github.com/evmos/evmos/v12/x/evm/statedb"
 	evm "github.com/evmos/evmos/v12/x/evm/types"
 	feemarkettypes "github.com/evmos/evmos/v12/x/feemarket/types"
-	inflationtypes "github.com/evmos/evmos/v12/x/inflation/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -171,9 +171,9 @@ func (suite *KeeperTestSuite) SetupIBCTest() {
 	suite.Require().True(ok)
 	coinEvmos := sdk.NewCoin(utils.BaseDenom, amt)
 	coins := sdk.NewCoins(coinEvmos)
-	err = s.app.BankKeeper.MintCoins(suite.EvmosChain.GetContext(), inflationtypes.ModuleName, coins)
+	err = s.app.BankKeeper.MintCoins(suite.EvmosChain.GetContext(), banktypes.ModuleName, coins)
 	suite.Require().NoError(err)
-	err = s.app.BankKeeper.SendCoinsFromModuleToAccount(suite.EvmosChain.GetContext(), inflationtypes.ModuleName, suite.EvmosChain.SenderAccount.GetAddress(), coins)
+	err = s.app.BankKeeper.SendCoinsFromModuleToAccount(suite.EvmosChain.GetContext(), banktypes.ModuleName, suite.EvmosChain.SenderAccount.GetAddress(), coins)
 	suite.Require().NoError(err)
 
 	// we need some coins in the bankkeeper to be able to register the coins later

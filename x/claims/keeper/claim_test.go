@@ -7,6 +7,7 @@ import (
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -16,7 +17,6 @@ import (
 	"github.com/evmos/evmos/v12/testutil"
 	utiltx "github.com/evmos/evmos/v12/testutil/tx"
 	evmostypes "github.com/evmos/evmos/v12/types"
-	inflationtypes "github.com/evmos/evmos/v12/x/inflation/types"
 
 	"github.com/evmos/evmos/v12/x/claims/types"
 )
@@ -252,7 +252,7 @@ func (suite *KeeperTestSuite) TestClaimCoinsForAction() {
 				// drain the module account funds to test error
 				addr := suite.app.ClaimsKeeper.GetModuleAccountAddress()
 				coins := suite.app.BankKeeper.GetAllBalances(suite.ctx, addr)
-				err := suite.app.BankKeeper.SendCoinsFromModuleToModule(suite.ctx, types.ModuleName, inflationtypes.ModuleName, coins)
+				err := suite.app.BankKeeper.SendCoinsFromModuleToModule(suite.ctx, types.ModuleName, banktypes.ModuleName, coins)
 				suite.Require().NoError(err)
 			},
 			types.NewClaimsRecord(sdk.NewInt(200)),

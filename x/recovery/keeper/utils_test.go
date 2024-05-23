@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
@@ -13,7 +14,6 @@ import (
 	ibctesting "github.com/evmos/evmos/v12/ibc/testing"
 	"github.com/evmos/evmos/v12/utils"
 	claimstypes "github.com/evmos/evmos/v12/x/claims/types"
-	inflationtypes "github.com/evmos/evmos/v12/x/inflation/types"
 	"github.com/evmos/evmos/v12/x/recovery/types"
 )
 
@@ -51,18 +51,18 @@ func (suite *IBCTestingSuite) SetupTest() {
 	suite.Require().True(ok)
 	coinEvmos := sdk.NewCoin(utils.BaseDenom, amt)
 	coins := sdk.NewCoins(coinEvmos)
-	err := suite.EvmosChain.App.(*app.Evmos).BankKeeper.MintCoins(suite.EvmosChain.GetContext(), inflationtypes.ModuleName, coins)
+	err := suite.EvmosChain.App.(*app.Evmos).BankKeeper.MintCoins(suite.EvmosChain.GetContext(), banktypes.ModuleName, coins)
 	suite.Require().NoError(err)
 
 	// Fund sender address to pay fees
-	err = suite.EvmosChain.App.(*app.Evmos).BankKeeper.SendCoinsFromModuleToAccount(suite.EvmosChain.GetContext(), inflationtypes.ModuleName, suite.EvmosChain.SenderAccount.GetAddress(), coins)
+	err = suite.EvmosChain.App.(*app.Evmos).BankKeeper.SendCoinsFromModuleToAccount(suite.EvmosChain.GetContext(), banktypes.ModuleName, suite.EvmosChain.SenderAccount.GetAddress(), coins)
 	suite.Require().NoError(err)
 
 	coinEvmos = sdk.NewCoin(utils.BaseDenom, sdk.NewInt(10000))
 	coins = sdk.NewCoins(coinEvmos)
-	err = suite.EvmosChain.App.(*app.Evmos).BankKeeper.MintCoins(suite.EvmosChain.GetContext(), inflationtypes.ModuleName, coins)
+	err = suite.EvmosChain.App.(*app.Evmos).BankKeeper.MintCoins(suite.EvmosChain.GetContext(), banktypes.ModuleName, coins)
 	suite.Require().NoError(err)
-	err = suite.EvmosChain.App.(*app.Evmos).BankKeeper.SendCoinsFromModuleToAccount(suite.EvmosChain.GetContext(), inflationtypes.ModuleName, suite.IBCOsmosisChain.SenderAccount.GetAddress(), coins)
+	err = suite.EvmosChain.App.(*app.Evmos).BankKeeper.SendCoinsFromModuleToAccount(suite.EvmosChain.GetContext(), banktypes.ModuleName, suite.IBCOsmosisChain.SenderAccount.GetAddress(), coins)
 	suite.Require().NoError(err)
 
 	// Mint coins on the osmosis side which we'll use to unlock our aevmos

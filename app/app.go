@@ -158,13 +158,6 @@ import (
 	erc20client "github.com/evmos/evmos/v12/x/erc20/client"
 	erc20keeper "github.com/evmos/evmos/v12/x/erc20/keeper"
 	erc20types "github.com/evmos/evmos/v12/x/erc20/types"
-	"github.com/evmos/evmos/v12/x/incentives"
-	incentivesclient "github.com/evmos/evmos/v12/x/incentives/client"
-	incentiveskeeper "github.com/evmos/evmos/v12/x/incentives/keeper"
-	incentivestypes "github.com/evmos/evmos/v12/x/incentives/types"
-	"github.com/evmos/evmos/v12/x/inflation"
-	inflationkeeper "github.com/evmos/evmos/v12/x/inflation/keeper"
-	inflationtypes "github.com/evmos/evmos/v12/x/inflation/types"
 	"github.com/evmos/evmos/v12/x/recovery"
 	recoverykeeper "github.com/evmos/evmos/v12/x/recovery/keeper"
 	recoverytypes "github.com/evmos/evmos/v12/x/recovery/types"
@@ -221,7 +214,6 @@ var (
 				ibcclientclient.UpdateClientProposalHandler, ibcclientclient.UpgradeProposalHandler,
 				// Evmos proposal types
 				erc20client.RegisterCoinProposalHandler, erc20client.RegisterERC20ProposalHandler, erc20client.ToggleTokenConversionProposalHandler,
-				incentivesclient.RegisterIncentiveProposalHandler, incentivesclient.CancelIncentiveProposalHandler,
 			},
 		),
 		params.AppModuleBasic{},
@@ -237,9 +229,7 @@ var (
 		vesting.AppModuleBasic{},
 		evm.AppModuleBasic{},
 		feemarket.AppModuleBasic{},
-		inflation.AppModuleBasic{},
 		erc20.AppModuleBasic{},
-		incentives.AppModuleBasic{},
 		epochs.AppModuleBasic{},
 		claims.AppModuleBasic{},
 		recovery.AppModuleBasic{},
@@ -256,15 +246,14 @@ var (
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 		icatypes.ModuleName:            nil,
 		evmtypes.ModuleName:            {authtypes.Minter, authtypes.Burner}, // used for secure addition and subtraction of balance using module account
-		inflationtypes.ModuleName:      {authtypes.Minter},
 		erc20types.ModuleName:          {authtypes.Minter, authtypes.Burner},
 		claimstypes.ModuleName:         nil,
-		incentivestypes.ModuleName:     {authtypes.Minter, authtypes.Burner},
+		banktypes.ModuleName:           {authtypes.Minter, authtypes.Burner},
 	}
 
 	// module accounts that are allowed to receive tokens
 	allowedReceivingModAcc = map[string]bool{
-		incentivestypes.ModuleName: true,
+		banktypes.ModuleName: true,
 	}
 )
 
@@ -318,13 +307,11 @@ type Evmos struct {
 	FeeMarketKeeper feemarketkeeper.Keeper
 
 	// Evmos keepers
-	InflationKeeper  inflationkeeper.Keeper
-	ClaimsKeeper     *claimskeeper.Keeper
-	Erc20Keeper      erc20keeper.Keeper
-	IncentivesKeeper incentiveskeeper.Keeper
-	EpochsKeeper     epochskeeper.Keeper
-	RecoveryKeeper   *recoverykeeper.Keeper
-	RevenueKeeper    revenuekeeper.Keeper
+	ClaimsKeeper   *claimskeeper.Keeper
+	Erc20Keeper    erc20keeper.Keeper
+	EpochsKeeper   epochskeeper.Keeper
+	RecoveryKeeper *recoverykeeper.Keeper
+	RevenueKeeper  revenuekeeper.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -380,7 +367,7 @@ func NewEvmos(
 		// ethermint keys
 		evmtypes.StoreKey, feemarkettypes.StoreKey,
 		// evmos keys
-		inflationtypes.StoreKey, erc20types.StoreKey, incentivestypes.StoreKey,
+		erc20types.StoreKey,
 		epochstypes.StoreKey, claimstypes.StoreKey,
 		revenuetypes.StoreKey, recoverytypes.StoreKey,
 	)
@@ -475,9 +462,7 @@ func NewEvmos(
 		AddRoute(distrtypes.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.DistrKeeper)).
 		AddRoute(upgradetypes.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.UpgradeKeeper)).
 		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.IBCKeeper.ClientKeeper)).
-		AddRoute(erc20types.RouterKey, erc20.NewErc20ProposalHandler(&app.Erc20Keeper)).
-		AddRoute(incentivestypes.RouterKey, incentives.NewIncentivesProposalHandler(&app.IncentivesKeeper))
-
+		AddRoute(erc20types.RouterKey, erc20.NewErc20ProposalHandler(&app.Erc20Keeper))
 	govConfig := govtypes.DefaultConfig()
 	/*
 		Example of setting gov params:
@@ -489,12 +474,6 @@ func NewEvmos(
 	)
 
 	// Evmos Keeper
-	app.InflationKeeper = inflationkeeper.NewKeeper(
-		keys[inflationtypes.StoreKey], appCodec, authtypes.NewModuleAddress(govtypes.ModuleName),
-		app.AccountKeeper, app.BankKeeper, app.DistrKeeper, &stakingKeeper,
-		authtypes.FeeCollectorName,
-	)
-
 	app.ClaimsKeeper = claimskeeper.NewKeeper(
 		appCodec, keys[claimstypes.StoreKey], authtypes.NewModuleAddress(govtypes.ModuleName),
 		app.AccountKeeper, app.BankKeeper, &stakingKeeper, app.DistrKeeper, app.IBCKeeper.ChannelKeeper,
@@ -516,11 +495,6 @@ func NewEvmos(
 		app.AccountKeeper, app.BankKeeper, app.EvmKeeper, app.StakingKeeper, app.ClaimsKeeper,
 	)
 
-	app.IncentivesKeeper = incentiveskeeper.NewKeeper(
-		keys[incentivestypes.StoreKey], appCodec, authtypes.NewModuleAddress(govtypes.ModuleName),
-		app.AccountKeeper, app.BankKeeper, app.InflationKeeper, app.StakingKeeper, app.EvmKeeper,
-	)
-
 	app.RevenueKeeper = revenuekeeper.NewKeeper(
 		keys[revenuetypes.StoreKey], appCodec, authtypes.NewModuleAddress(govtypes.ModuleName),
 		app.BankKeeper, app.EvmKeeper,
@@ -530,9 +504,7 @@ func NewEvmos(
 	epochsKeeper := epochskeeper.NewKeeper(appCodec, keys[epochstypes.StoreKey])
 	app.EpochsKeeper = *epochsKeeper.SetHooks(
 		epochskeeper.NewMultiEpochHooks(
-			// insert epoch hooks receivers here
-			app.IncentivesKeeper.Hooks(),
-			app.InflationKeeper.Hooks(),
+		// insert epoch hooks receivers here
 		),
 	)
 
@@ -545,7 +517,6 @@ func NewEvmos(
 	app.EvmKeeper = app.EvmKeeper.SetHooks(
 		evmkeeper.NewMultiEvmHooks(
 			app.Erc20Keeper.Hooks(),
-			app.IncentivesKeeper.Hooks(),
 			app.RevenueKeeper.Hooks(),
 			app.ClaimsKeeper.Hooks(),
 		),
@@ -669,12 +640,8 @@ func NewEvmos(
 		evm.NewAppModule(app.EvmKeeper, app.AccountKeeper, app.GetSubspace(evmtypes.ModuleName)),
 		feemarket.NewAppModule(app.FeeMarketKeeper, app.GetSubspace(feemarkettypes.ModuleName)),
 		// Evmos app modules
-		inflation.NewAppModule(app.InflationKeeper, app.AccountKeeper, app.StakingKeeper,
-			app.GetSubspace(inflationtypes.ModuleName)),
 		erc20.NewAppModule(app.Erc20Keeper, app.AccountKeeper,
 			app.GetSubspace(erc20types.ModuleName)),
-		incentives.NewAppModule(app.IncentivesKeeper, app.AccountKeeper,
-			app.GetSubspace(incentivestypes.ModuleName)),
 		epochs.NewAppModule(appCodec, app.EpochsKeeper),
 		claims.NewAppModule(appCodec, *app.ClaimsKeeper,
 			app.GetSubspace(claimstypes.ModuleName)),
@@ -713,10 +680,8 @@ func NewEvmos(
 		authz.ModuleName,
 		feegrant.ModuleName,
 		paramstypes.ModuleName,
-		inflationtypes.ModuleName,
 		erc20types.ModuleName,
 		claimstypes.ModuleName,
-		incentivestypes.ModuleName,
 		recoverytypes.ModuleName,
 		revenuetypes.ModuleName,
 	)
@@ -747,9 +712,7 @@ func NewEvmos(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		// Evmos modules
-		inflationtypes.ModuleName,
 		erc20types.ModuleName,
-		incentivestypes.ModuleName,
 		recoverytypes.ModuleName,
 		revenuetypes.ModuleName,
 	)
@@ -786,9 +749,7 @@ func NewEvmos(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		// Evmos modules
-		inflationtypes.ModuleName,
 		erc20types.ModuleName,
-		incentivestypes.ModuleName,
 		epochstypes.ModuleName,
 		recoverytypes.ModuleName,
 		revenuetypes.ModuleName,
@@ -1125,10 +1086,8 @@ func initParamsKeeper(
 	paramsKeeper.Subspace(evmtypes.ModuleName).WithKeyTable(evmtypes.ParamKeyTable()) //nolint: staticcheck
 	paramsKeeper.Subspace(feemarkettypes.ModuleName).WithKeyTable(feemarkettypes.ParamKeyTable())
 	// evmos subspaces
-	paramsKeeper.Subspace(inflationtypes.ModuleName)
 	paramsKeeper.Subspace(erc20types.ModuleName)
 	paramsKeeper.Subspace(claimstypes.ModuleName)
-	paramsKeeper.Subspace(incentivestypes.ModuleName)
 	paramsKeeper.Subspace(recoverytypes.ModuleName)
 	paramsKeeper.Subspace(revenuetypes.ModuleName)
 	return paramsKeeper

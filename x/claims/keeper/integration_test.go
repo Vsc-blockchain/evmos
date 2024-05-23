@@ -12,12 +12,12 @@ import (
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/evmos/evmos/v12/crypto/ethsecp256k1"
 	"github.com/evmos/evmos/v12/testutil"
 	"github.com/evmos/evmos/v12/testutil/tx"
 	"github.com/evmos/evmos/v12/utils"
 	"github.com/evmos/evmos/v12/x/claims/types"
-	inflationtypes "github.com/evmos/evmos/v12/x/inflation/types"
 )
 
 var _ = Describe("Claiming", Ordered, func() {
@@ -70,9 +70,9 @@ var _ = Describe("Claiming", Ordered, func() {
 		// mint coins for claiming and send them to the claims module
 		coins := sdk.NewCoins(totalClaimsAmount)
 
-		err = testutil.FundModuleAccount(s.ctx, s.app.BankKeeper, inflationtypes.ModuleName, coins)
+		err = testutil.FundModuleAccount(s.ctx, s.app.BankKeeper, banktypes.ModuleName, coins)
 		s.Require().NoError(err)
-		err = s.app.BankKeeper.SendCoinsFromModuleToModule(s.ctx, inflationtypes.ModuleName, types.ModuleName, coins)
+		err = s.app.BankKeeper.SendCoinsFromModuleToModule(s.ctx, banktypes.ModuleName, types.ModuleName, coins)
 		s.Require().NoError(err)
 
 		// fund testing accounts and create claim records

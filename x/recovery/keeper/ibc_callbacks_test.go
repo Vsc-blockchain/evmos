@@ -19,8 +19,8 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 	ibcmock "github.com/cosmos/ibc-go/v6/testing/mock"
 
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	claimstypes "github.com/evmos/evmos/v12/x/claims/types"
-	incentivestypes "github.com/evmos/evmos/v12/x/incentives/types"
 	"github.com/evmos/evmos/v12/x/recovery/keeper"
 	"github.com/evmos/evmos/v12/x/recovery/types"
 )
@@ -171,7 +171,7 @@ func (suite *KeeperTestSuite) TestOnRecvPacket() {
 		{
 			"continue - receiver is a module account",
 			func() {
-				incentivesAcc := suite.app.AccountKeeper.GetModuleAccount(suite.ctx, incentivestypes.ModuleName)
+				incentivesAcc := suite.app.AccountKeeper.GetModuleAccount(suite.ctx, banktypes.ModuleName)
 				suite.Require().NotNil(incentivesAcc)
 				addr := incentivesAcc.GetAddress().String()
 				transfer := transfertypes.NewFungibleTokenPacketData(denom, "100", addr, addr, "")

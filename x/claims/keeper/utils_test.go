@@ -23,7 +23,6 @@ import (
 	"github.com/evmos/evmos/v12/x/claims/types"
 	evm "github.com/evmos/evmos/v12/x/evm/types"
 	feemarkettypes "github.com/evmos/evmos/v12/x/feemarket/types"
-	incentivestypes "github.com/evmos/evmos/v12/x/incentives/types"
 	"github.com/stretchr/testify/require"
 )
 

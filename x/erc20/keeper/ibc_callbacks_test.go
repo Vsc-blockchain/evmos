@@ -24,10 +24,10 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 	ibcmock "github.com/cosmos/ibc-go/v6/testing/mock"
 
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/evmos/evmos/v12/contracts"
 	claimstypes "github.com/evmos/evmos/v12/x/claims/types"
 	"github.com/evmos/evmos/v12/x/erc20/types"
-	inflationtypes "github.com/evmos/evmos/v12/x/inflation/types"
 )
 
 var erc20Denom = "erc20/0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -422,9 +422,9 @@ func (suite *KeeperTestSuite) TestConvertCoinToERC20FromPacket() {
 				// Mint coins on account to simulate receiving ibc transfer
 				coinEvmos := sdk.NewCoin(pair.Denom, sdk.NewInt(10))
 				coins := sdk.NewCoins(coinEvmos)
-				err := suite.app.BankKeeper.MintCoins(suite.ctx, inflationtypes.ModuleName, coins)
+				err := suite.app.BankKeeper.MintCoins(suite.ctx, banktypes.ModuleName, coins)
 				suite.Require().NoError(err)
-				err = suite.app.BankKeeper.SendCoinsFromModuleToAccount(suite.ctx, inflationtypes.ModuleName, sender, coins)
+				err = suite.app.BankKeeper.SendCoinsFromModuleToAccount(suite.ctx, banktypes.ModuleName, sender, coins)
 				suite.Require().NoError(err)
 
 				return transfertypes.NewFungibleTokenPacketData(pair.Denom, "10", senderAddr, "", "")
@@ -617,9 +617,9 @@ func (suite *KeeperTestSuite) TestOnTimeoutPacket() {
 				// Mint coins on account to simulate receiving ibc transfer
 				coinEvmos := sdk.NewCoin(pair.Denom, sdk.NewInt(10))
 				coins := sdk.NewCoins(coinEvmos)
-				err := suite.app.BankKeeper.MintCoins(suite.ctx, inflationtypes.ModuleName, coins)
+				err := suite.app.BankKeeper.MintCoins(suite.ctx, banktypes.ModuleName, coins)
 				suite.Require().NoError(err)
-				err = suite.app.BankKeeper.SendCoinsFromModuleToAccount(suite.ctx, inflationtypes.ModuleName, sender, coins)
+				err = suite.app.BankKeeper.SendCoinsFromModuleToAccount(suite.ctx, banktypes.ModuleName, sender, coins)
 				suite.Require().NoError(err)
 
 				return transfertypes.NewFungibleTokenPacketData(pair.Denom, "10", senderAddr, "", "")
