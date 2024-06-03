@@ -20,11 +20,11 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmtypes "github.com/cometbft/cometbft/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/evmos/evmos/v12/app"
 	"github.com/evmos/evmos/v12/encoding"
@@ -41,7 +41,10 @@ func Commit(ctx sdk.Context, app *app.Evmos, t time.Duration, vs *tmtypes.Valida
 	header := ctx.BlockHeader()
 
 	if vs != nil {
-		res := app.EndBlock(abci.RequestEndBlock{Height: header.Height})
+		res, err := app.EndBlocker(ctx)
+		if err != nil {
+			return ctx, err
+		}
 
 		nextVals, err := applyValSetChanges(vs, res.ValidatorUpdates)
 		if err != nil {
@@ -50,47 +53,21 @@ func Commit(ctx sdk.Context, app *app.Evmos, t time.Duration, vs *tmtypes.Valida
 		header.ValidatorsHash = vs.Hash()
 		header.NextValidatorsHash = nextVals.Hash()
 	} else {
-		app.EndBlocker(ctx, abci.RequestEndBlock{Height: header.Height})
+		app.EndBlocker(ctx)
 	}
 
-	_ = app.Commit()
+	_, err := app.Commit()
+	if err != nil {
+		return ctx, err
+	}
 
 	header.Height++
 	header.Time = header.Time.Add(t)
 	header.AppHash = app.LastCommitID().Hash
 
-	app.BeginBlock(abci.RequestBeginBlock{
-		Header: header,
-	})
+	app.BeginBlocker(ctx)
 
-	return app.BaseApp.NewContext(false, header), nil
-}
-
-// DeliverTx delivers a cosmos tx for a given set of msgs
-func DeliverTx(
-	ctx sdk.Context,
-	appEvmos *app.Evmos,
-	priv cryptotypes.PrivKey,
-	gasPrice *sdkmath.Int,
-	msgs ...sdk.Msg,
-) (abci.ResponseDeliverTx, error) {
-	txConfig := encoding.MakeConfig(app.ModuleBasics).TxConfig
-	tx, err := tx.PrepareCosmosTx(
-		ctx,
-		appEvmos,
-		tx.CosmosTxArgs{
-			TxCfg:    txConfig,
-			Priv:     priv,
-			ChainID:  ctx.ChainID(),
-			Gas:      10_000_000,
-			GasPrice: gasPrice,
-			Msgs:     msgs,
-		},
-	)
-	if err != nil {
-		return abci.ResponseDeliverTx{}, err
-	}
-	return BroadcastTxBytes(appEvmos, txConfig.TxEncoder(), tx)
+	return app.BaseApp.NewContext(false), nil
 }
 
 // DeliverEthTx generates and broadcasts a Cosmos Tx populated with MsgEthereumTx messages.
@@ -100,12 +77,12 @@ func DeliverEthTx(
 	appEvmos *app.Evmos,
 	priv cryptotypes.PrivKey,
 	msgs ...sdk.Msg,
-) (abci.ResponseDeliverTx, error) {
+) error {
 	txConfig := encoding.MakeConfig(app.ModuleBasics).TxConfig
 
 	tx, err := tx.PrepareEthTx(txConfig, appEvmos, priv, msgs...)
 	if err != nil {
-		return abci.ResponseDeliverTx{}, err
+		return err
 	}
 	return BroadcastTxBytes(appEvmos, txConfig.TxEncoder(), tx)
 }
@@ -154,20 +131,23 @@ func CheckEthTx(
 }
 
 // BroadcastTxBytes encodes a transaction and calls DeliverTx on the app.
-func BroadcastTxBytes(app *app.Evmos, txEncoder sdk.TxEncoder, tx sdk.Tx) (abci.ResponseDeliverTx, error) {
+func BroadcastTxBytes(app *app.Evmos, txEncoder sdk.TxEncoder, tx sdk.Tx) error {
 	// bz are bytes to be broadcasted over the network
 	bz, err := txEncoder(tx)
 	if err != nil {
-		return abci.ResponseDeliverTx{}, err
+		return /*abci.ExecTxResult{},*/ err
 	}
 
-	req := abci.RequestDeliverTx{Tx: bz}
-	res := app.BaseApp.DeliverTx(req)
-	if res.Code != 0 {
-		return abci.ResponseDeliverTx{}, errorsmod.Wrapf(errortypes.ErrInvalidRequest, res.Log)
+	req := abci.RequestFinalizeBlock{
+		Height: app.LastBlockHeight() + 1,
+		Txs:    [][]byte{bz},
+	}
+	_, err = app.BaseApp.FinalizeBlock(&req)
+	if err != nil { //res.Code != 0 {
+		return err //abci.ResponseDeliverTx{}, errorsmod.Wrapf(errortypes.ErrInvalidRequest, res.Log)
 	}
 
-	return res, nil
+	return nil
 }
 
 // checkTxBytes encodes a transaction and calls checkTx on the app.
@@ -178,12 +158,15 @@ func checkTxBytes(app *app.Evmos, txEncoder sdk.TxEncoder, tx sdk.Tx) (abci.Resp
 	}
 
 	req := abci.RequestCheckTx{Tx: bz}
-	res := app.BaseApp.CheckTx(req)
-	if res.Code != 0 {
+	res, err := app.BaseApp.CheckTx(&req)
+	if err != nil { //res.Code != 0 {
 		return abci.ResponseCheckTx{}, errorsmod.Wrapf(errortypes.ErrInvalidRequest, res.Log)
 	}
+	/*if res.Code != 0 {
+		return abci.ResponseCheckTx{}, errorsmod.Wrapf(errortypes.ErrInvalidRequest, res.Log)
+	}*/
 
-	return res, nil
+	return *res, nil
 }
 
 // applyValSetChanges takes in tmtypes.ValidatorSet and []abci.ValidatorUpdate and will return a new tmtypes.ValidatorSet which has the

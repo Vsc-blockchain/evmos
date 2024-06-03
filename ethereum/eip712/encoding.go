@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -29,9 +28,11 @@ import (
 	evmostypes "github.com/evmos/evmos/v12/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	evmosappparams "github.com/evmos/evmos/v12/app/params"
 )
 
 var (
+	//protoCodec codec.ProtoCodecMarshaler
 	protoCodec codec.ProtoCodecMarshaler
 	aminoCodec *codec.LegacyAmino
 )
@@ -40,7 +41,7 @@ var (
 // The process of unmarshaling SignDoc bytes into a SignDoc object requires having a codec
 // populated with all relevant message types. As a result, we must call this method on app
 // initialization with the app's encoding config.
-func SetEncodingConfig(cfg params.EncodingConfig) {
+func SetEncodingConfig(cfg evmosappparams.EncodingConfig) {
 	aminoCodec = cfg.Amino
 	protoCodec = codec.NewProtoCodec(cfg.InterfaceRegistry)
 }
@@ -190,8 +191,6 @@ func decodeProtobufSignDoc(signDocBytes []byte) (apitypes.TypedData, error) {
 		Gas:    authInfo.Fee.GasLimit,
 	}
 
-	tip := authInfo.Tip
-
 	// WrapTxToTypedData expects the payload as an Amino Sign Doc
 	signBytes := legacytx.StdSignBytes(
 		signDoc.ChainId,
@@ -201,7 +200,6 @@ func decodeProtobufSignDoc(signDocBytes []byte) (apitypes.TypedData, error) {
 		*stdFee,
 		msgs,
 		body.Memo,
-		tip,
 	)
 
 	typedData, err := WrapTxToTypedData(
@@ -235,16 +233,22 @@ func validatePayloadMessages(msgs []sdk.Msg) error {
 	var msgSigner sdk.AccAddress
 
 	for i, m := range msgs {
-		if len(m.GetSigners()) != 1 {
+		signers, _, err := protoCodec.GetMsgV1Signers(m)
+		if err != nil {
+			return err
+		}
+
+		if len(signers) != 1 {
 			return errors.New("unable to build EIP-712 payload: expect exactly 1 signer")
 		}
 
+		signer0 := sdk.AccAddress(signers[0])
 		if i == 0 {
-			msgSigner = m.GetSigners()[0]
+			msgSigner = signer0
 			continue
 		}
 
-		if !msgSigner.Equals(m.GetSigners()[0]) {
+		if !msgSigner.Equals(signer0) {
 			return errors.New("unable to build EIP-712 payload: multiple signers detected")
 		}
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/simapp/params"
+	"github.com/evmos/evmos/v12/app/params"
 
 	"github.com/evmos/evmos/v12/app"
 	"github.com/evmos/evmos/v12/crypto/hd"

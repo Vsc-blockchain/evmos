@@ -11,6 +11,7 @@ proto_dirs=$(find ./proto -path -prune -o -name '*.proto' -print0 | xargs -0 -n1
 for dir in $proto_dirs; do
   proto_files=$(find "${dir}" -maxdepth 1 -name '*.proto')
   for file in $proto_files; do
+    echo $file
     # Check if the go_package in the file is pointing to evmos
     if grep -q "option go_package.*evmos" "$file"; then
       buf generate --template proto/buf.gen.gogo.yaml "$file"
@@ -20,4 +21,6 @@ done
 
 # move proto files to the right places
 cp -r github.com/evmos/evmos/v*/* ./
-rm -rf github.com
+rm -Rf github.com
+
+go mod tidy

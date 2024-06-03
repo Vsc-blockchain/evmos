@@ -33,7 +33,11 @@ func ClaimStakingRewardsIfNecessary(
 	addr sdk.AccAddress,
 	amount sdk.Coins,
 ) error {
-	stakingDenom := stakingKeeper.BondDenom(ctx)
+	stakingDenom, err := stakingKeeper.BondDenom(ctx)
+	if err != nil {
+		return err
+	}
+
 	found, amountInStakingDenom := amount.Find(stakingDenom)
 	if !found {
 		return errortypes.ErrInsufficientFee.Wrapf(
@@ -85,7 +89,13 @@ func ClaimSufficientStakingRewards(
 		cacheCtx,
 		addr,
 		func(_ int64, delegation stakingtypes.DelegationI) (stop bool) {
-			reward, err = distributionKeeper.WithdrawDelegationRewards(cacheCtx, addr, delegation.GetValidatorAddr())
+			valAddrString := delegation.GetValidatorAddr()
+			valAddr, err := sdk.ValAddressFromBech32(valAddrString)
+			if err != nil {
+				// this should not happen
+				panic("invalid validator address")
+			}
+			reward, err = distributionKeeper.WithdrawDelegationRewards(cacheCtx, addr, valAddr)
 			if err != nil {
 				return true
 			}

@@ -36,6 +36,7 @@ import (
 	"github.com/evmos/evmos/v12/ethereum/eip712"
 	"github.com/evmos/evmos/v12/types"
 
+	txsigning "cosmossdk.io/x/tx/signing"
 	evmtypes "github.com/evmos/evmos/v12/x/evm/types"
 )
 
@@ -55,13 +56,13 @@ func init() {
 // CONTRACT: Tx must implement SigVerifiableTx interface
 type LegacyEip712SigVerificationDecorator struct {
 	ak              evmtypes.AccountKeeper
-	signModeHandler authsigning.SignModeHandler
+	signModeHandler txsigning.HandlerMap
 }
 
 // Deprecated: NewLegacyEip712SigVerificationDecorator creates a new LegacyEip712SigVerificationDecorator
 func NewLegacyEip712SigVerificationDecorator(
 	ak evmtypes.AccountKeeper,
-	signModeHandler authsigning.SignModeHandler,
+	signModeHandler txsigning.HandlerMap,
 ) LegacyEip712SigVerificationDecorator {
 	return LegacyEip712SigVerificationDecorator{
 		ak:              ak,
@@ -98,7 +99,10 @@ func (svd LegacyEip712SigVerificationDecorator) AnteHandle(ctx sdk.Context,
 		return ctx, err
 	}
 
-	signerAddrs := sigTx.GetSigners()
+	signerAddrs, err := sigTx.GetSigners()
+	if err != nil {
+		return ctx, err
+	}
 
 	// EIP712 allows just one signature
 	if len(sigs) != 1 {
@@ -170,7 +174,7 @@ func VerifySignature(
 	pubKey cryptotypes.PubKey,
 	signerData authsigning.SignerData,
 	sigData signing.SignatureData,
-	_ authsigning.SignModeHandler,
+	_ txsigning.HandlerMap,
 	tx authsigning.Tx,
 ) error {
 	switch data := sigData.(type) {
@@ -201,7 +205,7 @@ func VerifySignature(
 				Amount: tx.GetFee(),
 				Gas:    tx.GetGas(),
 			},
-			msgs, tx.GetMemo(), tx.GetTip(),
+			msgs, tx.GetMemo(),
 		)
 
 		signerChainID, err := types.ParseChainID(signerData.ChainID)

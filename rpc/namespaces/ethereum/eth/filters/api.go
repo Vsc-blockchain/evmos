@@ -24,11 +24,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/evmos/evmos/v12/rpc/types"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 
-	coretypes "github.com/tendermint/tendermint/rpc/core/types"
-	rpcclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
-	tmtypes "github.com/tendermint/tendermint/types"
+	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -345,23 +345,25 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 
 		for {
 			select {
-			case ev, ok := <-headersCh:
+			/*case ev, ok := <-headersCh:*/
+			case _, ok := <-headersCh:
 				if !ok {
 					headersSub.Unsubscribe(api.events)
 					return
 				}
 
-				data, ok := ev.Data.(tmtypes.EventDataNewBlockHeader)
-				if !ok {
-					api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
-					continue
-				}
+				// TODO: Fix fetching base fee from events
+				//data, ok := ev.Data.(tmtypes.EventDataNewBlockHeader)
+				//if !ok {
+				//	api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
+				//	continue
+				//}
 
-				baseFee := types.BaseFeeFromEvents(data.ResultBeginBlock.Events)
+				//baseFee := types.BaseFeeFromEvents(data.Header.Height)
 
 				// TODO: fetch bloom from events
-				header := types.EthHeaderFromTendermint(data.Header, ethtypes.Bloom{}, baseFee)
-				_ = notifier.Notify(rpcSub.ID, header) // #nosec G703
+				//header := types.EthHeaderFromTendermint(data.Header, ethtypes.Bloom{}, baseFee)
+				//_ = notifier.Notify(rpcSub.ID, header) // #nosec G703
 			case <-rpcSub.Err():
 				headersSub.Unsubscribe(api.events)
 				return

@@ -26,7 +26,7 @@ import (
 	distributionkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/cosmos/cosmos-sdk/x/staking/teststaking"
+	stakingtestutil "github.com/cosmos/cosmos-sdk/x/staking/testutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/evmos/evmos/v12/app"
 	testutiltx "github.com/evmos/evmos/v12/testutil/tx"
@@ -51,7 +51,7 @@ import (
 func PrepareAccountsForDelegationRewards(t *testing.T, ctx sdk.Context, app *app.Evmos, addr sdk.AccAddress, balance sdkmath.Int, rewards ...sdkmath.Int) (sdk.Context, error) {
 	// Calculate the necessary amount of tokens to fund the account in order for the desired residual balance to
 	// be left after creating validators and delegating to them.
-	totalRewards := sdk.ZeroInt()
+	totalRewards := sdkmath.ZeroInt()
 	for _, reward := range rewards {
 		totalRewards = totalRewards.Add(reward)
 	}
@@ -96,13 +96,13 @@ func PrepareAccountsForDelegationRewards(t *testing.T, ctx sdk.Context, app *app
 			return sdk.Context{}, fmt.Errorf("failed to fund validator account: %s", err.Error())
 		}
 
-		zeroDec := sdk.ZeroDec()
+		zeroDec := sdkmath.LegacyZeroDec()
 		stakingParams := app.StakingKeeper.GetParams(ctx)
 		stakingParams.BondDenom = utils.BaseDenom
 		stakingParams.MinCommissionRate = zeroDec
 		app.StakingKeeper.SetParams(ctx, stakingParams)
 
-		stakingHelper := teststaking.NewHelper(t, ctx, app.StakingKeeper)
+		stakingHelper := stakingtestutil.NewHelper(t, ctx, app.StakingKeeper)
 		stakingHelper.Commission = stakingtypes.NewCommissionRates(zeroDec, zeroDec, zeroDec)
 		stakingHelper.Denom = utils.BaseDenom
 

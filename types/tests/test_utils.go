@@ -16,10 +16,6 @@
 
 package tests
 
-import (
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
-)
-
 var (
 	UosmoDenomtrace = transfertypes.DenomTrace{
 		Path:      "transfer/channel-0",

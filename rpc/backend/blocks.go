@@ -16,12 +16,12 @@
 package backend
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 	"math/big"
 	"strconv"
 
+	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,7 +31,6 @@ import (
 	rpctypes "github.com/evmos/evmos/v12/rpc/types"
 	evmtypes "github.com/evmos/evmos/v12/x/evm/types"
 	"github.com/pkg/errors"
-	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -257,15 +256,16 @@ func (b *Backend) EthMsgsFromTendermintBlock(
 	var result []*evmtypes.MsgEthereumTx
 	block := resBlock.Block
 
+	// Check if tx exists on EVM by cross checking with blockResults:
+	//  - Include unsuccessful tx that exceeds block gas limit
+	//  - Exclude unsuccessful tx with any other error but ExceedBlockGasLimit
 	txResults := blockRes.TxsResults
 
 	for i, tx := range block.Txs {
-		// Check if tx exists on EVM by cross checking with blockResults:
-		//  - Include unsuccessful tx that exceeds block gas limit
-		//  - Exclude unsuccessful tx with any other error but ExceedBlockGasLimit
-		if !rpctypes.TxSuccessOrExceedsBlockGasLimit(txResults[i]) {
-			b.logger.Debug("invalid tx result code", "cosmos-hash", hexutil.Encode(tx.Hash()))
-			continue
+
+		txResult := txResults[i]
+		if !rpctypes.TxSuccessOrExceedsBlockGasLimit(txResult) {
+			b.logger.Debug("invalid tx result code")
 		}
 
 		tx, err := b.clientCtx.TxConfig.TxDecoder()(tx)
@@ -351,14 +351,15 @@ func (b *Backend) HeaderByHash(blockHash common.Hash) (*ethtypes.Header, error) 
 
 // BlockBloom query block bloom filter from block results
 func (b *Backend) BlockBloom(blockRes *tmrpctypes.ResultBlockResults) (ethtypes.Bloom, error) {
-	for _, event := range blockRes.EndBlockEvents {
+	for _, event := range blockRes.FinalizeBlockEvents {
 		if event.Type != evmtypes.EventTypeBlockBloom {
 			continue
 		}
 
 		for _, attr := range event.Attributes {
-			if bytes.Equal(attr.Key, bAttributeKeyEthereumBloom) {
-				return ethtypes.BytesToBloom(attr.Value), nil
+
+			if attr.Key == evmtypes.AttributeKeyEthereumBloom {
+				return ethtypes.BytesToBloom([]byte(attr.Value)), nil
 			}
 		}
 	}
